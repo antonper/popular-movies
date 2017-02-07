@@ -11,6 +11,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.udacity.anton.popularmovies.data.MovieSimpleObject;
@@ -24,19 +26,21 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private String MOVIE_DB_API_KEY;
-    private TextView mTestView;
-    //if true-show poular. top_rated if false
+    private TextView mNoData;
+    //if true-show popular. top_rated if false
     private boolean isPopular;
     private RecyclerView mRecyclerView;
     private MovieAdapter mMovieAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
-
+    private ProgressBar mProgressBar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         isPopular = true;
+
+        mProgressBar= (ProgressBar) findViewById(R.id.progress_bar);
 
         mRecyclerView= (RecyclerView) findViewById(R.id.recycler_view_movies);
 
@@ -50,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
 
         MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
-        mTestView = (TextView) findViewById(R.id.test_text);
+        mNoData = (TextView) findViewById(R.id.no_internet_text);
         loadData();
     }
 
@@ -90,6 +94,21 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
     }
 
+    void showProgress(){
+        mProgressBar.setVisibility(View.VISIBLE);
+        mNoData.setVisibility(View.INVISIBLE);
+        mRecyclerView.setVisibility(View.INVISIBLE);
+    }
+    void showData(){
+        mProgressBar.setVisibility(View.INVISIBLE);
+        mNoData.setVisibility(View.INVISIBLE);
+        mRecyclerView.setVisibility(View.VISIBLE);
+    }
+    void showError(){
+        mProgressBar.setVisibility(View.INVISIBLE);
+        mNoData.setVisibility(View.VISIBLE);
+        mRecyclerView.setVisibility(View.INVISIBLE);
+    }
     @Override
     public void onClick(MovieSimpleObject movieSimpleObject) {
         Log.v(TAG,"Starting new intent on click");
@@ -106,11 +125,16 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         }
 
         @Override
+        protected void onPreExecute() {
+            showProgress();
+        }
+
+        @Override
         protected MovieSimpleObject[] doInBackground(URL... params) {
             URL url = params[0];
             try {
-                String jsonMovieResponce = NetworkUtils.getResponseFromHttpUrl(url);
-                return MovieListJsomUtils.getSimpleMovieStringFromJson(MainActivity.this, jsonMovieResponce);
+                String jsonMovieResponse = NetworkUtils.getResponseFromHttpUrl(url);
+                return MovieListJsomUtils.getSimpleMovieStringFromJson(MainActivity.this, jsonMovieResponse);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -120,6 +144,11 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         @Override
         protected void onPostExecute(MovieSimpleObject[] movieSimpleObjectStrings) {
             mMovieAdapter.setmMoviesStrings(movieSimpleObjectStrings);
+            if (movieSimpleObjectStrings==null){
+                showError();
+            } else{
+                showData();
+            }
         }
     }
 

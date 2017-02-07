@@ -2,4 +2,10 @@
     <string name="app_name">Popular Movies</string>
     <string name="menu_popular_first_title">Show Popular</string>
     <string name="menu_top_rated_first_title">Show Top Rated</string>
+    <string name="minute_appendix"> min</string>
+    <string name="score_appendix">/10</string>
+    <string name="mark_as_favorite">MARK AS\nFAVORITE</string>
+    <string name="videos_list_title">Trailers:</string>
+    <string name="reviews_list_title">Reviews:</string>
+    <string name="no_data_received">No data received</string>
 </resources>
