@@ -27,12 +27,18 @@ public class VideoAdapter extends ArrayAdapter<VideoObject> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         VideoObject video = getItem(position);
+        VideoViewHolder viewHolder;
         if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.video_list_item, parent, false);
+            viewHolder = new VideoViewHolder();
+            viewHolder.text = (TextView) convertView.findViewById(R.id.video_item_text);
+            convertView.setTag(viewHolder);
+        } else {
+            viewHolder = (VideoViewHolder) convertView.getTag();
         }
 
-        TextView textView = (TextView) convertView.findViewById(R.id.video_item_text);
-        textView.setText(video.getName());
+
+        viewHolder.text.setText(video.getName());
 
         return convertView;
     }
@@ -40,5 +46,9 @@ public class VideoAdapter extends ArrayAdapter<VideoObject> {
     void setVideos(VideoObject[] videos) {
         this.mVideos = videos;
         notifyDataSetChanged();
+    }
+
+    static class VideoViewHolder {
+        TextView text;
     }
 }

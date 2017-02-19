@@ -3,7 +3,10 @@
 /local.properties
 /.idea/workspace.xml
 /.idea/libraries
+/.idea/copyright
+/.idea
 .DS_Store
 /build
 /captures
+/app/src/main/res/values/secrets.xml
 .externalNativeBuild
