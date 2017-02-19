@@ -8,11 +8,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- * Created by anton on 05/02/17.
- */
 
-public final class MovieListJsomUtils {
+public final class MovieListJsonUtils {
 
     public static MovieSimpleObject[] getSimpleMovieStringFromJson(Context context, String movieListJsonString) throws JSONException {
         final String MDB_RESULTS="results";
@@ -23,7 +20,7 @@ public final class MovieListJsomUtils {
 
         JSONArray movieArray=movieListJson.getJSONArray(MDB_RESULTS);
 
-        MovieSimpleObject[] parcedData=new MovieSimpleObject[movieArray.length()];
+        MovieSimpleObject[] parsedData=new MovieSimpleObject[movieArray.length()];
 
         for(int i=0;i<movieArray.length();i++){
             String movie_poster;
@@ -41,9 +38,9 @@ public final class MovieListJsomUtils {
 
 
 
-            parcedData[i] = new MovieSimpleObject(movie_poster,movie_id);
+            parsedData[i] = new MovieSimpleObject(movie_poster,movie_id);
         }
-        return parcedData;
+        return parsedData;
     }
 
 }

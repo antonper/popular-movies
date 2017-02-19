@@ -12,106 +12,127 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.udacity.anton.popularmovies.data.MovieSimpleObject;
-import com.udacity.anton.popularmovies.utils.MovieListJsomUtils;
+import com.udacity.anton.popularmovies.utils.MovieListJsonUtils;
 import com.udacity.anton.popularmovies.utils.NetworkUtils;
 
 import java.net.URL;
+
+import butterknife.BindView;
+import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity implements MovieAdapter.MovieAdapterOnClickHandler {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
     private String MOVIE_DB_API_KEY;
-    private TextView mNoData;
+
     //if true-show popular. top_rated if false
     private boolean isPopular;
-    private RecyclerView mRecyclerView;
+
+    private static int PAGE_LIMIT = 100;
+
+    @BindView(R.id.no_internet_text)
+    TextView mNoData;
+    @BindView(R.id.recycler_view_movies)
+    RecyclerView mRecyclerView;
+    @BindView(R.id.progress_bar)
+    ProgressBar mProgressBar;
     private MovieAdapter mMovieAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
-    private ProgressBar mProgressBar;
+    private EndlessRecyclerViewScrollListener endlessScrollListener;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ButterKnife.bind(this);
+
 
         isPopular = true;
-
-        mProgressBar= (ProgressBar) findViewById(R.id.progress_bar);
-
-        mRecyclerView= (RecyclerView) findViewById(R.id.recycler_view_movies);
-
-        mLayoutManager = new GridLayoutManager(this,2);
+        mLayoutManager = new GridLayoutManager(this, 2);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
         mRecyclerView.setHasFixedSize(true);
 
-        mMovieAdapter=new MovieAdapter(this);
+        mMovieAdapter = new MovieAdapter(this);
         mRecyclerView.setAdapter(mMovieAdapter);
+        endlessScrollListener = new EndlessRecyclerViewScrollListener((GridLayoutManager) mLayoutManager) {
+            @Override
+            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+                if (page <= PAGE_LIMIT) loadData(page);
+            }
+
+        };
+        mRecyclerView.addOnScrollListener(endlessScrollListener);
 
 
         MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
-        mNoData = (TextView) findViewById(R.id.no_internet_text);
-        loadData();
+        loadData(1);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater=getMenuInflater();
-        inflater.inflate(R.menu.movies_order_menu,menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.movies_order_menu, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        int id=item.getItemId();
+        int id = item.getItemId();
 
-        if(id== R.id.movies_order_menu){
-            isPopular=!isPopular;
-            if(!isPopular){
+        if (id == R.id.movies_order_menu) {
+            isPopular = !isPopular;
+            if (!isPopular) {
                 item.setTitle(R.string.menu_popular_first_title);
-            }else{
+            } else {
                 item.setTitle(R.string.menu_top_rated_first_title);
             }
-            loadData();
+            mMovieAdapter.clearMovies();
+            endlessScrollListener.resetState();
+            loadData(1);
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    private void loadData() {
+    private void loadData(int page) {
         URL dataUrl;
         if (isPopular) {
-            dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, 1);
+            dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
         } else {
-            dataUrl= NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY,1);
+            dataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page);
         }
         new FetchMovieData().execute(dataUrl);
-        mLayoutManager.scrollToPosition(0);
-
+        //mLayoutManager.scrollToPosition(0);
     }
 
-    void showProgress(){
+    void showProgress() {
         mProgressBar.setVisibility(View.VISIBLE);
         mNoData.setVisibility(View.INVISIBLE);
         mRecyclerView.setVisibility(View.INVISIBLE);
     }
-    void showData(){
+
+    void showData() {
         mProgressBar.setVisibility(View.INVISIBLE);
         mNoData.setVisibility(View.INVISIBLE);
         mRecyclerView.setVisibility(View.VISIBLE);
     }
-    void showError(){
+
+    void showError() {
         mProgressBar.setVisibility(View.INVISIBLE);
         mNoData.setVisibility(View.VISIBLE);
         mRecyclerView.setVisibility(View.INVISIBLE);
     }
+
     @Override
     public void onClick(MovieSimpleObject movieSimpleObject) {
-        Log.v(TAG,"Starting new intent on click");
+        Log.v(TAG, "Starting new intent on click");
         Context context = this;
         Class destinationClass = DetailActivity.class;
         Intent intentToStartDetailActivity = new Intent(context, destinationClass);
@@ -134,7 +155,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
             URL url = params[0];
             try {
                 String jsonMovieResponse = NetworkUtils.getResponseFromHttpUrl(url);
-                return MovieListJsomUtils.getSimpleMovieStringFromJson(MainActivity.this, jsonMovieResponse);
+                return MovieListJsonUtils.getSimpleMovieStringFromJson(MainActivity.this, jsonMovieResponse);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -143,14 +164,15 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
         @Override
         protected void onPostExecute(MovieSimpleObject[] movieSimpleObjectStrings) {
-            mMovieAdapter.setmMoviesStrings(movieSimpleObjectStrings);
-            if (movieSimpleObjectStrings==null){
+            mMovieAdapter.appendMovies(movieSimpleObjectStrings);
+            if (movieSimpleObjectStrings == null) {
                 showError();
-            } else{
+            } else {
                 showData();
             }
         }
     }
+
 
 }
 

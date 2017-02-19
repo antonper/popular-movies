@@ -20,22 +20,28 @@ class ReviewAdapter extends ArrayAdapter<ReviewObject> {
 
     public ReviewAdapter(Context context, ReviewObject[] reviews) {
         super(context, 0, reviews);
-        this.reviews=reviews;
+        this.reviews = reviews;
     }
 
     @NonNull
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        ReviewObject review=getItem(position);
-        if(convertView==null){
+        ReviewObject review = getItem(position);
+        if (convertView == null) {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.review_list_item, parent, false);
         }
 
-        TextView textView= (TextView) convertView.findViewById(R.id.review_item_text);
+        TextView textView = (TextView) convertView.findViewById(R.id.review_item_text);
         if (review != null) {
             textView.setText(review.getReviewAuthor());
         }
 
         return convertView;
     }
+
+    void setReviews(ReviewObject[] reviews) {
+        this.reviews = reviews;
+        notifyDataSetChanged();
+    }
+
 }
