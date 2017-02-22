@@ -118,6 +118,7 @@
                             android:paddingRight="10dp"
                             android:text="@string/mark_as_favorite"
                             android:textColor="@color/colorButtonText"
+                            android:onClick="onClickFavorite"
                             android:textSize="12sp"
 
                             />

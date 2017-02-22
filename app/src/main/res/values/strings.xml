@@ -9,4 +9,5 @@
     <string name="reviews_list_title">Reviews:</string>
     <string name="no_data_received">No data received</string>
     <string name="detail_activity_label">Movie Details</string>
+    <string name="remove_mark_favorite">REMOVE FROM\nFAVORITES</string>
 </resources>

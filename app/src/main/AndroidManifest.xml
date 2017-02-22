@@ -29,7 +29,10 @@
             android:value=".MainActivity" />
         </activity>
 
-        />
+        <provider
+            android:name="com.udacity.anton.popularmovies.content.MovieContentProvider"
+            android:authorities="com.udacity.anton.popularmovies"
+            android:exported="false"/>
     </application>
 
 </manifest>
