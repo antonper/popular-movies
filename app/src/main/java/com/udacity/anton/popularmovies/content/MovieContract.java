@@ -19,5 +19,6 @@ public class MovieContract {
         public static final String TABLE_NAME = "movies";
         public static final String _ID = "_id";
         public static final String COLUMN_FAVORITE = "favorite";
+        public static final String COLUMN_POSTER = "poster";
     }
 }

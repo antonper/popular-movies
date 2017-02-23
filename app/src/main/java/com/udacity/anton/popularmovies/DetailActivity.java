@@ -14,6 +14,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -36,11 +37,14 @@ import java.net.URL;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
+import static android.R.attr.name;
+
 public class DetailActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
     public static final String TAG = DetailActivity.class.getSimpleName();
     private static final int MOVIE_LOADER_ID = 0;
     private String mMovieId;
     private int mIsFavorite = 0;
+    private String mPosterString;
 
     @BindView(R.id.title_text_detail)
     TextView mTitleTextView;
@@ -62,6 +66,11 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
     @BindView(R.id.overview_text_detail)
     TextView mOverviewTextView;
 
+    @BindView(R.id.reviews_title)
+    TextView mReviewsTitle;
+
+    @BindView(R.id.trailers_title)
+    TextView mTrailersTitle;
 
     @BindView(R.id.trailer_list_detail)
     ListView mVideosList;
@@ -187,15 +196,17 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        if (data.getCount() > 0) {
+        if (data!=null && data.getCount() > 0) {
             int columnFavorite = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_FAVORITE);
+            int columnPoster = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER);
             data.moveToFirst();
             mIsFavorite = data.getInt(columnFavorite);
+//            mPosterString= data.getString(columnPoster);
         }
         if (mIsFavorite == 1) {
             buttonSetFavorite();
         }
-        Toast.makeText(mContext, "favorite:" + mIsFavorite, Toast.LENGTH_SHORT).show();
+//        Toast.makeText(mContext, "favorite:" + mIsFavorite, Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -214,18 +225,18 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
         mFavoriteButton.setBackgroundColor(ContextCompat.getColor(mContext, R.color.colorButton));
     }
 
-    public void onClickFavorite(View view) {
+        public void onClickFavorite(View view) {
 
         if (mIsFavorite == 0) {
             ContentValues contentValues = new ContentValues();
             contentValues.put(MovieContract.MovieEntry._ID, mMovieId);
             contentValues.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 1);
+            contentValues.put(MovieContract.MovieEntry.COLUMN_POSTER,mPosterString);
             Uri uri = getContentResolver().insert(MovieContract.MovieEntry.CONTENT_URI, contentValues);
             if (uri != null) {
                 mIsFavorite = 1;
                 buttonSetFavorite();
-                Toast.makeText(getBaseContext(), uri.toString(), Toast.LENGTH_LONG).show();
-
+//                Toast.makeText(getBaseContext(), uri.toString(), Toast.LENGTH_LONG).show();
             }
         } else {
             Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
@@ -281,6 +292,8 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
                 String year = fullDate.split("-")[0];
                 mDateTextView.setText(year);
 
+                mPosterString=movieDetailedObject.getMoviePosterPath();
+
                 Picasso.with(mContext)
                         .load(movieDetailedObject.getMoviePosterPath())
                         .into(mPosterView);
@@ -296,9 +309,15 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
                 mVideos = movieDetailedObject.getMovieTrailers();
                 Log.v(TAG, "Videos number:" + mVideos.length);
 //                mVideosArrayAdapter.setVideos(mVideos);
+                if(mVideos.length==0) {
+                    mTrailersTitle.setText(getString(R.string.no_trailers_title));
+                }
 
                 mReviews = movieDetailedObject.getMovieReviews();
                 Log.v(TAG, "Reviews number:" + mReviews.length);
+                if(mReviews.length==0) {
+                    mReviewsTitle.setText(getString(R.string.no_reviews_title));
+                }
 //                mReviewsArrayAdapter.setReviews(mReviews);
 
                 mVideosArrayAdapter = new VideoAdapter(mContext, mVideos);
@@ -310,6 +329,26 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
                 mVideosList.setAdapter(mVideosArrayAdapter);
                 UIUtils.setListViewHeightBasedOnItems(mVideosList);
 
+                mReviewsList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        ReviewObject review = (ReviewObject) mReviewsList.getItemAtPosition(position);
+//                        Toast.makeText(mContext,review.getReviewUrl(),Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse(review.getReviewUrl()));
+                        startActivity(intent);
+                    }
+                });
+                mVideosList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        VideoObject video = (VideoObject) mVideosList.getItemAtPosition(position);
+//                        Toast.makeText(mContext,video.getVideoUrl().toString(),Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(Uri.parse(video.getVideoUrl().toString()));
+                        startActivity(intent);
+                    }
+                });
 
                 showData();
             } else {

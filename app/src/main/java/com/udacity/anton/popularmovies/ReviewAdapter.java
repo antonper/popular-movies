@@ -54,4 +54,8 @@ class ReviewAdapter extends ArrayAdapter<ReviewObject> {
         TextView text;
     }
 
+    public ReviewObject getReview(int pos){
+        return reviews[pos];
+    }
+
 }

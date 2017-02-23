@@ -51,4 +51,5 @@ public class VideoAdapter extends ArrayAdapter<VideoObject> {
     static class VideoViewHolder {
         TextView text;
     }
+
 }

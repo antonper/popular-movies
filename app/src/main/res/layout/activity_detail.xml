@@ -114,11 +114,11 @@
                             android:layout_height="wrap_content"
                             android:layout_gravity="left"
                             android:background="@color/colorButton"
+                            android:onClick="onClickFavorite"
                             android:paddingLeft="10dp"
                             android:paddingRight="10dp"
                             android:text="@string/mark_as_favorite"
                             android:textColor="@color/colorButtonText"
-                            android:onClick="onClickFavorite"
                             android:textSize="12sp"
 
                             />
@@ -136,11 +136,13 @@
                     android:layout_width="fill_parent"
                     android:layout_height="1dp"
                     android:background="@color/colorPrimaryDark" />
-                \
+
 
                 <TextView
+                    android:id="@+id/trailers_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:paddingTop="20dp"
                     android:text="@string/videos_list_title"
                     android:textColor="@color/colorPrimaryDark"
                     android:textSize="20sp" />
@@ -150,13 +152,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
-
-
                 </ListView>
 
                 <TextView
+                    android:id="@+id/reviews_title"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:paddingTop="20dp"
                     android:text="@string/reviews_list_title"
                     android:textColor="@color/colorPrimaryDark"
                     android:textSize="20sp" />
