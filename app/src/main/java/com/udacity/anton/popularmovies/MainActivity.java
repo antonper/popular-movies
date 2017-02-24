@@ -48,6 +48,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     private static final int MOVIES_REMOTE_LOADER_ID = 10;
     private static final int MOVIES_DB_LOADER_ID = 11;
 
+    private boolean mDataHasChanged = false;
+
 
     @BindView(R.id.no_internet_text)
     TextView mNoData;
@@ -80,17 +82,18 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
                     if (mMode == 1) {
                         mDataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
                     } else if (mMode == 0) {
-                        mDataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page
-                        );
+                        mDataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page);
                     }
 
-                    if (modeOld == mMode && mMovies != null && mPage > page) {
-                        Log.v(TAG, " Delivering result");
-                        deliverResult(mMovies);
-                    } else {
-                        Log.v(TAG, " Loading page:" + page);
-                        mPage = page;
-                        forceLoad();
+                    if (mMode != 2) {
+                        if (modeOld == mMode && mMovies != null && mPage > page) {
+                            Log.v(TAG, " Delivering result");
+                            deliverResult(mMovies);
+                        } else {
+                            Log.v(TAG, " Loading page:" + page);
+                            mPage = page;
+                            forceLoad();
+                        }
                     }
                     modeOld = mMode;
                 }
@@ -141,11 +144,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
                 // onStartLoading() is called when a loader first starts loading data
                 @Override
                 protected void onStartLoading() {
-                    if (mMovieDbData != null) {
-                        // Delivers any previously loaded data immediately
-                        deliverResult(mMovieDbData);
-                    } else {
-                        // Force a new load
+                    // Force a new load
+                    if (mMode == 2) {
                         forceLoad();
                     }
                 }
@@ -286,6 +286,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
 
     private void loadData(int page) {
+
+        Log.v(TAG, "MODE:" + mMode);
 //        URL dataUrl = null;
 //        if (mMode == 1) {
 //            dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
@@ -332,6 +334,14 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         mProgressBar.setVisibility(View.INVISIBLE);
         mNoData.setVisibility(View.VISIBLE);
         mRecyclerView.setVisibility(View.INVISIBLE);
+    }
+
+
+    @Override
+    protected void onRestart() {
+        Log.v(TAG, "Mode is :" + mMode);
+        mMovieAdapter.clearMovies();
+        super.onRestart();
     }
 
     @Override

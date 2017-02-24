@@ -151,7 +151,7 @@ public final class NetworkUtils {
             e.printStackTrace();
         }
 
-        Log.v(TAG,"Image poster url: "+url);
+//        Log.v(TAG,"Image poster url: "+url);
         return url;
     }
 
