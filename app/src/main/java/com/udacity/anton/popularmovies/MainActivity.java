@@ -3,6 +3,9 @@ package com.udacity.anton.popularmovies;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
@@ -12,7 +15,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -38,6 +40,10 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
     private static int PAGE_LIMIT = 100;
 
+    private static final String PAGE_KEY = "page";
+
+    private static final int MOVIES_LOADER_ID = 10;
+
     @BindView(R.id.no_internet_text)
     TextView mNoData;
     @BindView(R.id.recycler_view_movies)
@@ -48,12 +54,85 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     private RecyclerView.LayoutManager mLayoutManager;
     private EndlessRecyclerViewScrollListener endlessScrollListener;
 
+    private Context mContext;
+
+
+    private LoaderManager.LoaderCallbacks<MovieSimpleObject[]> moviesLoaderListener = new LoaderManager.LoaderCallbacks<MovieSimpleObject[]>() {
+        @Override
+        public Loader<MovieSimpleObject[]> onCreateLoader(int id, final Bundle args) {
+
+            return new AsyncTaskLoader<MovieSimpleObject[]>(mContext) {
+                private URL mDataUrl = null;
+                private int mPage;
+
+                private int modeOld;
+                MovieSimpleObject[] mMovies;
+
+                @Override
+                protected void onStartLoading() {
+                    showProgress();
+                    int page = args.getInt(PAGE_KEY);
+                    if (mMode == 1) {
+                        mDataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
+                    } else if (mMode == 0) {
+                        mDataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page
+                        );
+                    }
+
+                    if (modeOld == mMode && mMovies != null && mPage > page) {
+                        Log.v(TAG, " Delivering result");
+                        deliverResult(mMovies);
+                    } else {
+                        Log.v(TAG, " Loading page:" + page);
+                        mPage = page;
+                        forceLoad();
+                    }
+                    modeOld = mMode;
+                }
+
+                @Override
+                public MovieSimpleObject[] loadInBackground() {
+                    try {
+                        String jsonMovieResponse = NetworkUtils.getResponseFromHttpUrl(mDataUrl);
+                        return MovieListJsonUtils.getSimpleMovieStringFromJson(MainActivity.this, jsonMovieResponse);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+
+                @Override
+                public void deliverResult(MovieSimpleObject[] data) {
+                    mMovies = data;
+                    super.deliverResult(data);
+                }
+            };
+        }
+
+        @Override
+        public void onLoadFinished(Loader<MovieSimpleObject[]> loader, MovieSimpleObject[] data) {
+            mMovieAdapter.appendMovies(data);
+            if (data == null) {
+                showError();
+            } else {
+                showData();
+            }
+
+        }
+
+        @Override
+        public void onLoaderReset(Loader<MovieSimpleObject[]> loader) {
+
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        mContext = this;
 
         mMode = 0;
         mLayoutManager = new GridLayoutManager(this, 2);
@@ -66,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         endlessScrollListener = new EndlessRecyclerViewScrollListener((GridLayoutManager) mLayoutManager) {
             @Override
             public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-                if (page <= PAGE_LIMIT) loadData(page);
+//                if (page <= PAGE_LIMIT) loadData(page);
             }
 
         };
@@ -91,6 +170,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         //TODO make 3 buttond but display 2 of them
         if (id == R.id.movies_order_menu) {
             mMode = 1 - mMode;
+            Log.v(TAG, "Mode is:" + mMode);
             if (mMode == 0) {
                 item.setTitle(R.string.menu_popular_first_title);
             } else if (mMode == 1) {
@@ -105,13 +185,24 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     }
 
     private void loadData(int page) {
-        URL dataUrl=null;
-        if (mMode == 1) {
-            dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
-        } else if (mMode == 0) {
-            dataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page);
+//        URL dataUrl = null;
+//        if (mMode == 1) {
+//            dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
+//        } else if (mMode == 0) {
+//            dataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page);
+//        }
+//        new FetchMovieData().execute(dataUrl);
+
+        Bundle bundle = new Bundle();
+        bundle.putInt(PAGE_KEY, page);
+
+        LoaderManager loaderManager = getSupportLoaderManager();
+        Loader<MovieSimpleObject[]> dataLoader = loaderManager.getLoader(MOVIES_LOADER_ID);
+        if (dataLoader==null) {
+            loaderManager.initLoader(MOVIES_LOADER_ID, bundle, moviesLoaderListener);
+        } else {
+            loaderManager.restartLoader(MOVIES_LOADER_ID, bundle, moviesLoaderListener);
         }
-        new FetchMovieData().execute(dataUrl);
         //mLayoutManager.scrollToPosition(0);
     }
 
@@ -142,40 +233,6 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         intentToStartDetailActivity.putExtra(Intent.EXTRA_TEXT, movieSimpleObject.getMovieId());
         startActivity(intentToStartDetailActivity);
     }
-
-    public class FetchMovieData extends AsyncTask<URL, Void, MovieSimpleObject[]> {
-
-        FetchMovieData() {
-        }
-
-        @Override
-        protected void onPreExecute() {
-            showProgress();
-        }
-
-        @Override
-        protected MovieSimpleObject[] doInBackground(URL... params) {
-            URL url = params[0];
-            try {
-                String jsonMovieResponse = NetworkUtils.getResponseFromHttpUrl(url);
-                return MovieListJsonUtils.getSimpleMovieStringFromJson(MainActivity.this, jsonMovieResponse);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(MovieSimpleObject[] movieSimpleObjectStrings) {
-            mMovieAdapter.appendMovies(movieSimpleObjectStrings);
-            if (movieSimpleObjectStrings == null) {
-                showError();
-            } else {
-                showData();
-            }
-        }
-    }
-
 
 }
 
