@@ -15,10 +15,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Created by anton on 05/02/17.
- */
-
 public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapterViewHolder> {
 
 
@@ -97,9 +93,9 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapter
 
     }
 
-    public void clearMovies(){
+    public void clearMovies() {
         mMoviesData.clear();
-         notifyDataSetChanged();
+        notifyDataSetChanged();
     }
 
 

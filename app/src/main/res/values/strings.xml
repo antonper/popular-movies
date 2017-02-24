@@ -12,4 +12,5 @@
     <string name="remove_mark_favorite">REMOVE FROM\nFAVORITES</string>
     <string name="no_trailers_title">No trailers :(</string>
     <string name="no_reviews_title">No reviews :(</string>
+    <string name="menu_favorite_first_title">Show Favorite</string>
 </resources>

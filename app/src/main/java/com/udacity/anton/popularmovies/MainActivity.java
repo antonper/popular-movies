@@ -2,7 +2,8 @@ package com.udacity.anton.popularmovies;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
+import android.database.Cursor;
+import android.net.Uri;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
@@ -18,6 +19,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.udacity.anton.popularmovies.content.MovieContract;
 import com.udacity.anton.popularmovies.data.MovieSimpleObject;
 import com.udacity.anton.popularmovies.utils.MovieListJsonUtils;
 import com.udacity.anton.popularmovies.utils.NetworkUtils;
@@ -38,11 +40,14 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     //fav:2
     private int mMode;
 
+    private Menu mMenu;
     private static int PAGE_LIMIT = 100;
 
     private static final String PAGE_KEY = "page";
 
-    private static final int MOVIES_LOADER_ID = 10;
+    private static final int MOVIES_REMOTE_LOADER_ID = 10;
+    private static final int MOVIES_DB_LOADER_ID = 11;
+
 
     @BindView(R.id.no_internet_text)
     TextView mNoData;
@@ -125,6 +130,89 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
         }
     };
+    private LoaderManager.LoaderCallbacks<Cursor> dbLoaderListener = new LoaderManager.LoaderCallbacks<Cursor>() {
+        @Override
+        public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+            return new AsyncTaskLoader<Cursor>(mContext) {
+
+                // Initialize a Cursor, this will hold all the task data
+                Cursor mMovieDbData = null;
+
+                // onStartLoading() is called when a loader first starts loading data
+                @Override
+                protected void onStartLoading() {
+                    if (mMovieDbData != null) {
+                        // Delivers any previously loaded data immediately
+                        deliverResult(mMovieDbData);
+                    } else {
+                        // Force a new load
+                        forceLoad();
+                    }
+                }
+
+                @Override
+                public Cursor loadInBackground() {
+                    Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().build();
+                    Cursor returnCur;
+                    try {
+                        returnCur = getContentResolver().query(uri,
+                                null,
+                                null,
+                                null,
+                                null);
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to asynchronously load data.");
+                        e.printStackTrace();
+                        return null;
+                    }
+
+                    Log.v(TAG, "Cursor count " + returnCur.getCount());
+
+                    if (returnCur.getCount() == 0) {
+
+                    }
+                    return returnCur;
+                }
+
+                // deliverResult sends the result of the load, a Cursor, to the registered listener
+                public void deliverResult(Cursor data) {
+                    mMovieDbData = data;
+                    super.deliverResult(data);
+                }
+            };
+
+        }
+
+
+        @Override
+        public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+
+            if (data == null) {
+                showError();
+            } else {
+                int columnId = data.getColumnIndex(MovieContract.MovieEntry._ID);
+                int columnPoster = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER);
+
+                MovieSimpleObject[] movies = new MovieSimpleObject[data.getCount()];
+
+                while (data.moveToNext()) {
+                    int id = data.getInt(columnId);
+                    String poster = data.getString(columnPoster);
+                    movies[data.getPosition()] = new MovieSimpleObject(poster, Integer.toString(id));
+                }
+                mMovieAdapter.appendMovies(movies);
+                showData();
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Cursor> loader) {
+
+        }
+
+
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,7 +233,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         endlessScrollListener = new EndlessRecyclerViewScrollListener((GridLayoutManager) mLayoutManager) {
             @Override
             public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-//                if (page <= PAGE_LIMIT) loadData(page);
+                if (mMode != 2 && page <= PAGE_LIMIT) loadData(page);
             }
 
         };
@@ -160,6 +248,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.movies_order_menu, menu);
+        this.mMenu = menu;
         return true;
     }
 
@@ -168,21 +257,33 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         int id = item.getItemId();
 
         //TODO make 3 buttond but display 2 of them
-        if (id == R.id.movies_order_menu) {
-            mMode = 1 - mMode;
-            Log.v(TAG, "Mode is:" + mMode);
-            if (mMode == 0) {
-                item.setTitle(R.string.menu_popular_first_title);
-            } else if (mMode == 1) {
-                item.setTitle(R.string.menu_top_rated_first_title);
-            }
+        if (id == R.id.movies_top_rated_menu) {
+            mMode = 1;
             mMovieAdapter.clearMovies();
             endlessScrollListener.resetState();
             loadData(1);
+            mMenu.setGroupVisible(R.id.order_menu_group, true);
+            item.setVisible(false);
+            return true;
+        } else if (id == R.id.movies_popular_menu) {
+            mMode = 0;
+            mMovieAdapter.clearMovies();
+            endlessScrollListener.resetState();
+            mMenu.setGroupVisible(R.id.order_menu_group, true);
+            item.setVisible(false);
+            loadData(1);
+        } else if (id == R.id.movies_favorite_menu) {
+            mMode = 2;
+            mMovieAdapter.clearMovies();
+            endlessScrollListener.resetState();
+            loadData(1);
+            mMenu.setGroupVisible(R.id.order_menu_group, true);
+            item.setVisible(false);
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
+
 
     private void loadData(int page) {
 //        URL dataUrl = null;
@@ -192,16 +293,25 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 //            dataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page);
 //        }
 //        new FetchMovieData().execute(dataUrl);
-
-        Bundle bundle = new Bundle();
-        bundle.putInt(PAGE_KEY, page);
-
         LoaderManager loaderManager = getSupportLoaderManager();
-        Loader<MovieSimpleObject[]> dataLoader = loaderManager.getLoader(MOVIES_LOADER_ID);
-        if (dataLoader==null) {
-            loaderManager.initLoader(MOVIES_LOADER_ID, bundle, moviesLoaderListener);
+        if (mMode != 2) {
+            Bundle bundle = new Bundle();
+            bundle.putInt(PAGE_KEY, page);
+
+
+            Loader<MovieSimpleObject[]> dataLoader = loaderManager.getLoader(MOVIES_REMOTE_LOADER_ID);
+            if (dataLoader == null) {
+                loaderManager.initLoader(MOVIES_REMOTE_LOADER_ID, bundle, moviesLoaderListener);
+            } else {
+                loaderManager.restartLoader(MOVIES_REMOTE_LOADER_ID, bundle, moviesLoaderListener);
+            }
         } else {
-            loaderManager.restartLoader(MOVIES_LOADER_ID, bundle, moviesLoaderListener);
+            Loader<Cursor> dbLoader = loaderManager.getLoader(MOVIES_DB_LOADER_ID);
+            if (dbLoader == null) {
+                loaderManager.initLoader(MOVIES_DB_LOADER_ID, null, dbLoaderListener);
+            } else {
+                loaderManager.restartLoader(MOVIES_DB_LOADER_ID, null, dbLoaderListener);
+            }
         }
         //mLayoutManager.scrollToPosition(0);
     }

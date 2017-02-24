@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-
-    <item
-        android:id="@+id/movies_order_menu"
-        android:orderInCategory="1"
-        android:title="@string/menu_top_rated_first_title"
-        app:showAsAction="never"/>
+    <group android:id="@+id/order_menu_group">
+        <item
+            android:id="@+id/movies_top_rated_menu"
+            android:orderInCategory="1"
+            android:title="@string/menu_top_rated_first_title"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/movies_popular_menu"
+            android:visible="false"
+            android:orderInCategory="2"
+            android:title="@string/menu_popular_first_title"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/movies_favorite_menu"
+            android:orderInCategory="3"
+            android:title="@string/menu_favorite_first_title"
+            app:showAsAction="never" />
+    </group>
 </menu>
