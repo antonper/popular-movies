@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.PersistableBundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
@@ -29,6 +30,8 @@ import java.net.URL;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
+import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
 public class MainActivity extends AppCompatActivity implements MovieAdapter.MovieAdapterOnClickHandler {
 
     private static final String TAG = MainActivity.class.getSimpleName();
@@ -44,6 +47,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     private static int PAGE_LIMIT = 100;
 
     private static final String PAGE_KEY = "page";
+
+    public static final String MODE_SAVE_KEY="mode";
 
     private static final int MOVIES_REMOTE_LOADER_ID = 10;
     private static final int MOVIES_DB_LOADER_ID = 11;
@@ -62,6 +67,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     private EndlessRecyclerViewScrollListener endlessScrollListener;
 
     private Context mContext;
+    private int mColumnNumber;
 
 
     private LoaderManager.LoaderCallbacks<MovieSimpleObject[]> moviesLoaderListener = new LoaderManager.LoaderCallbacks<MovieSimpleObject[]>() {
@@ -223,7 +229,20 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         mContext = this;
 
         mMode = 0;
-        mLayoutManager = new GridLayoutManager(this, 2);
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(MODE_SAVE_KEY)) {
+                mMode=savedInstanceState.getInt(MODE_SAVE_KEY);
+            }
+        }
+
+
+
+        if(getResources().getConfiguration().orientation == ORIENTATION_LANDSCAPE){
+            mColumnNumber=3;
+        }else{
+            mColumnNumber=2;
+        }
+        mLayoutManager = new GridLayoutManager(this, mColumnNumber);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
         mRecyclerView.setHasFixedSize(true);
@@ -240,6 +259,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         mRecyclerView.addOnScrollListener(endlessScrollListener);
 
 
+
+
         MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
         loadData(1);
     }
@@ -249,6 +270,18 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.movies_order_menu, menu);
         this.mMenu = menu;
+        mMenu.setGroupVisible(R.id.order_menu_group, true);
+        switch (mMode){
+            case 0:
+                mMenu.findItem(R.id.movies_popular_menu).setVisible(false);
+                break;
+            case 1:
+                mMenu.findItem(R.id.movies_top_rated_menu).setVisible(false);
+                break;
+            case 2:
+                mMenu.findItem(R.id.movies_favorite_menu).setVisible(false);
+                break;
+        }
         return true;
     }
 
@@ -256,7 +289,6 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
-        //TODO make 3 buttond but display 2 of them
         if (id == R.id.movies_top_rated_menu) {
             mMode = 1;
             mMovieAdapter.clearMovies();
@@ -341,7 +373,19 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     protected void onRestart() {
         Log.v(TAG, "Mode is :" + mMode);
         mMovieAdapter.clearMovies();
+
         super.onRestart();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(MODE_SAVE_KEY,mMode);
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
+        super.onSaveInstanceState(outState, outPersistentState);
     }
 
     @Override

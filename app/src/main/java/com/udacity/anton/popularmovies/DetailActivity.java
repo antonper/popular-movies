@@ -127,7 +127,7 @@ public class DetailActivity extends AppCompatActivity  {
                         return null;
                     }
 
-                    Log.v(TAG, "Cursor count " + returnCur.getCount());
+                    Log.v(TAG, "Cursor count in details" + returnCur.getCount());
 
                     if (returnCur.getCount() == 0) {
 
@@ -180,6 +180,9 @@ public class DetailActivity extends AppCompatActivity  {
                     showProgress();
                     if (movieDetailedObject != null) {
                         deliverResult(movieDetailedObject);
+
+                        showData();
+
                     } else {
                         forceLoad();
                     }
@@ -324,6 +327,8 @@ public class DetailActivity extends AppCompatActivity  {
 
         getSupportLoaderManager().initLoader(DETAIL_MOVIE_LOADER_ID,null, movieDetailLoaderListenter);
         getSupportLoaderManager().initLoader(DB_MOVIE_LOADER_ID,null,dbLoaderListener);
+
+
 
 
     }
