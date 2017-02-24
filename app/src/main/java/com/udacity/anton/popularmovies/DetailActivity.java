@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.ContextCompat;
@@ -37,11 +36,16 @@ import java.net.URL;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-import static android.R.attr.name;
-
-public class DetailActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class DetailActivity extends AppCompatActivity  {
     public static final String TAG = DetailActivity.class.getSimpleName();
-    private static final int MOVIE_LOADER_ID = 0;
+
+    private static final int DB_MOVIE_LOADER_ID = 0;
+    private static final int DETAIL_MOVIE_LOADER_ID = 1;
+
+    private static final String MOVIE_ID_KEY ="movie_id";
+
+
+
     private String mMovieId;
     private int mIsFavorite = 0;
     private String mPosterString;
@@ -86,205 +90,135 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
     private Button mFavoriteButton;
 
     private VideoObject[] mVideos;
-    private ReviewObject[] mReviews;
+    private LoaderManager.LoaderCallbacks<Cursor> dbLoaderListener= new LoaderManager.LoaderCallbacks<Cursor>() {
+        @Override
+        public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+            return new AsyncTaskLoader<Cursor>(mContext) {
 
+                // Initialize a Cursor, this will hold all the task data
+                Cursor mMovieDbData = null;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_detail);
+                // onStartLoading() is called when a loader first starts loading data
+                @Override
+                protected void onStartLoading() {
+                    if (mMovieDbData != null) {
+                        // Delivers any previously loaded data immediately
+                        deliverResult(mMovieDbData);
+                    } else {
+                        // Force a new load
+                        forceLoad();
+                    }
+                }
 
-        ButterKnife.bind(this);
-        MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
+                @Override
+                public Cursor loadInBackground() {
+                    Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
+                    Cursor returnCur;
+                    try {
+                        returnCur = getContentResolver().query(uri,
+                                null,
+                                null,
+                                null,
+                                null);
 
-        mContext = this;
+                    } catch (Exception e) {
+                        Log.e(TAG, "Failed to asynchronously load data.");
+                        e.printStackTrace();
+                        return null;
+                    }
 
-        mFavoriteButton = (Button) findViewById(R.id.favorite_button);
-        Intent startIntent = getIntent();
-        if (startIntent != null) {
-            if (startIntent.hasExtra(Intent.EXTRA_TEXT)) {
-                mMovieId = startIntent.getStringExtra(Intent.EXTRA_TEXT);
-            }
+                    Log.v(TAG, "Cursor count " + returnCur.getCount());
+
+                    if (returnCur.getCount() == 0) {
+
+                    }
+                    return returnCur;
+                }
+
+                // deliverResult sends the result of the load, a Cursor, to the registered listener
+                public void deliverResult(Cursor data) {
+                    mMovieDbData = data;
+                    super.deliverResult(data);
+                }
+            };
+
         }
 
 
-        new FetchMovieDetails().execute(mMovieId);
-
-        getSupportLoaderManager().initLoader(MOVIE_LOADER_ID, null, this);
-
-
-    }
-
-    void showError() {
-        mProgressBar.setVisibility(View.INVISIBLE);
-        mScrollView.setVisibility(View.INVISIBLE);
-        mDataErrorText.setVisibility(View.VISIBLE);
-    }
-
-    void showProgress() {
-        mProgressBar.setVisibility(View.VISIBLE);
-        mScrollView.setVisibility(View.INVISIBLE);
-        mDataErrorText.setVisibility(View.INVISIBLE);
-    }
-
-    void showData() {
-        mProgressBar.setVisibility(View.INVISIBLE);
-        mScrollView.setVisibility(View.VISIBLE);
-        mDataErrorText.setVisibility(View.INVISIBLE);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        // re-queries for all tasks
-        getSupportLoaderManager().restartLoader(MOVIE_LOADER_ID, null, this);
-    }
-
-    @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        return new AsyncTaskLoader<Cursor>(this) {
-
-            // Initialize a Cursor, this will hold all the task data
-            Cursor mMovieData = null;
-
-            // onStartLoading() is called when a loader first starts loading data
-            @Override
-            protected void onStartLoading() {
-                if (mMovieData != null) {
-                    // Delivers any previously loaded data immediately
-                    deliverResult(mMovieData);
-                } else {
-                    // Force a new load
-                    forceLoad();
-                }
+        @Override
+        public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+            if (data!=null && data.getCount() > 0) {
+                int columnFavorite = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_FAVORITE);
+                int columnPoster = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER);
+                data.moveToFirst();
+                mIsFavorite = data.getInt(columnFavorite);
+//            mPosterString= data.getString(columnPoster);
             }
+            if (mIsFavorite == 1) {
+                buttonSetFavorite();
+            }
+//        Toast.makeText(mContext, "favorite:" + mIsFavorite, Toast.LENGTH_SHORT).show();
+        }
 
-            @Override
-            public Cursor loadInBackground() {
-                Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
-                Cursor returnCur;
-                try {
-                    returnCur = getContentResolver().query(uri,
-                            null,
-                            null,
-                            null,
-                            null);
+        @Override
+        public void onLoaderReset(Loader<Cursor> loader) {
 
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to asynchronously load data.");
-                    e.printStackTrace();
+        }
+
+
+    };
+    private LoaderManager.LoaderCallbacks<MovieDetailedObject> movieDetailLoaderListenter = new LoaderManager.LoaderCallbacks<MovieDetailedObject>(){
+
+        @Override
+        public Loader<MovieDetailedObject> onCreateLoader(int id, Bundle args) {
+            return new AsyncTaskLoader<MovieDetailedObject>(mContext) {
+
+                MovieDetailedObject movieDetailedObject;
+
+                @Override
+                protected void onStartLoading() {
+                    showProgress();
+                    if (movieDetailedObject != null) {
+                        deliverResult(movieDetailedObject);
+                    } else {
+                        forceLoad();
+                    }
+                }
+
+                @Override
+                public MovieDetailedObject loadInBackground() {
+                    URL detailsUrl = NetworkUtils.buildDetailUrl(MOVIE_DB_API_KEY, mMovieId);
+                    URL trailersUrl = NetworkUtils.buildTrailersUrl(MOVIE_DB_API_KEY,mMovieId );
+                    URL reviewsUrl = NetworkUtils.buildReviewsUrl(MOVIE_DB_API_KEY, mMovieId);
+                    try {
+                        String jsonMovieDetails = NetworkUtils.getResponseFromHttpUrl(detailsUrl);
+                        MovieDetailedObject movieDetailedObject = MovieDetailJsonUtil.getMovieDetailedObjectFromJsonString(jsonMovieDetails);
+
+                        String jsonTrailers = NetworkUtils.getResponseFromHttpUrl(trailersUrl);
+                        VideoObject[] videos = MovieDetailJsonUtil.getVideosFromJsonString(jsonTrailers);
+                        movieDetailedObject.setMovieTrailers(videos);
+
+                        String jsonReviews = NetworkUtils.getResponseFromHttpUrl(reviewsUrl);
+                        ReviewObject[] reviews = MovieDetailJsonUtil.getReviewsFromJsonString(jsonReviews);
+                        movieDetailedObject.setMovieReviews(reviews);
+
+                        return movieDetailedObject;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     return null;
                 }
 
-                Log.v(TAG, "Cursor count " + returnCur.getCount());
-
-                if (returnCur.getCount() == 0) {
-
+                @Override
+                public void deliverResult(MovieDetailedObject data) {
+                    movieDetailedObject = data;
+                    super.deliverResult(data);
                 }
-                return returnCur;
-            }
-
-            // deliverResult sends the result of the load, a Cursor, to the registered listener
-            public void deliverResult(Cursor data) {
-                mMovieData = data;
-                super.deliverResult(data);
-            }
-        };
-
-    }
-
-    @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        if (data!=null && data.getCount() > 0) {
-            int columnFavorite = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_FAVORITE);
-            int columnPoster = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER);
-            data.moveToFirst();
-            mIsFavorite = data.getInt(columnFavorite);
-//            mPosterString= data.getString(columnPoster);
-        }
-        if (mIsFavorite == 1) {
-            buttonSetFavorite();
-        }
-//        Toast.makeText(mContext, "favorite:" + mIsFavorite, Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
-
-    }
-
-
-    public void buttonSetFavorite() {
-        mFavoriteButton.setText(getText(R.string.remove_mark_favorite));
-        mFavoriteButton.setBackgroundColor(ContextCompat.getColor(mContext, R.color.colorButtonPressed));
-    }
-
-    public void buttonSetUnfavorite() {
-        mFavoriteButton.setText(getText(R.string.mark_as_favorite));
-        mFavoriteButton.setBackgroundColor(ContextCompat.getColor(mContext, R.color.colorButton));
-    }
-
-        public void onClickFavorite(View view) {
-
-        if (mIsFavorite == 0) {
-            ContentValues contentValues = new ContentValues();
-            contentValues.put(MovieContract.MovieEntry._ID, mMovieId);
-            contentValues.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 1);
-            contentValues.put(MovieContract.MovieEntry.COLUMN_POSTER,mPosterString);
-            Uri uri = getContentResolver().insert(MovieContract.MovieEntry.CONTENT_URI, contentValues);
-            if (uri != null) {
-                mIsFavorite = 1;
-                buttonSetFavorite();
-//                Toast.makeText(getBaseContext(), uri.toString(), Toast.LENGTH_LONG).show();
-            }
-        } else {
-            Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
-            if(getContentResolver().delete(uri,null,null)>0){
-                buttonSetUnfavorite();
-                mIsFavorite=0;
-            }else{
-                Toast.makeText(mContext,"Ooops, cant delete it",Toast.LENGTH_SHORT).show();
-            }
-
-        }
-
-    }
-
-    public class FetchMovieDetails extends AsyncTask<String, Void, MovieDetailedObject> {
-
-        @Override
-        protected void onPreExecute() {
-            showProgress();
+            };
         }
 
         @Override
-        protected MovieDetailedObject doInBackground(String... params) {
-            String movieId = params[0];
-            URL detailsUrl = NetworkUtils.buildDetailUrl(MOVIE_DB_API_KEY, movieId);
-            URL trailersUrl = NetworkUtils.buildTrailersUrl(MOVIE_DB_API_KEY, movieId);
-            URL reviewsUrl = NetworkUtils.buildReviewsUrl(MOVIE_DB_API_KEY, movieId);
-            try {
-                String jsonMovieDetails = NetworkUtils.getResponseFromHttpUrl(detailsUrl);
-                MovieDetailedObject movieDetailedObject = MovieDetailJsonUtil.getMovieDetailedObjectFromJsonString(jsonMovieDetails);
-
-                String jsonTrailers = NetworkUtils.getResponseFromHttpUrl(trailersUrl);
-                VideoObject[] videos = MovieDetailJsonUtil.getVideosFromJsonString(jsonTrailers);
-                movieDetailedObject.setMovieTrailers(videos);
-
-                String jsonReviews = NetworkUtils.getResponseFromHttpUrl(reviewsUrl);
-                ReviewObject[] reviews = MovieDetailJsonUtil.getReviewsFromJsonString(jsonReviews);
-                movieDetailedObject.setMovieReviews(reviews);
-
-                return movieDetailedObject;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(MovieDetailedObject movieDetailedObject) {
+        public void onLoadFinished(Loader<MovieDetailedObject> loader, MovieDetailedObject movieDetailedObject) {
             if (movieDetailedObject != null) {
                 mTitleTextView.setText(movieDetailedObject.getMovieTitle());
 
@@ -354,6 +288,105 @@ public class DetailActivity extends AppCompatActivity implements LoaderManager.L
             } else {
                 showError();
             }
+
         }
+
+        @Override
+        public void onLoaderReset(Loader<MovieDetailedObject> loader) {
+
+        }
+    };
+
+
+    private ReviewObject[] mReviews;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_detail);
+
+        ButterKnife.bind(this);
+        MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
+
+        mContext = this;
+
+        mFavoriteButton = (Button) findViewById(R.id.favorite_button);
+        Intent startIntent = getIntent();
+        if (startIntent != null) {
+            if (startIntent.hasExtra(Intent.EXTRA_TEXT)) {
+                mMovieId = startIntent.getStringExtra(Intent.EXTRA_TEXT);
+            }
+        }
+
+
+        Bundle movieDetailBundle = new Bundle();
+        movieDetailBundle.putString(MOVIE_ID_KEY,mMovieId);
+
+        getSupportLoaderManager().initLoader(DETAIL_MOVIE_LOADER_ID,null, movieDetailLoaderListenter);
+        getSupportLoaderManager().initLoader(DB_MOVIE_LOADER_ID,null,dbLoaderListener);
+
+
+    }
+
+    void showError() {
+        mProgressBar.setVisibility(View.INVISIBLE);
+        mScrollView.setVisibility(View.INVISIBLE);
+        mDataErrorText.setVisibility(View.VISIBLE);
+    }
+
+    void showProgress() {
+        mProgressBar.setVisibility(View.VISIBLE);
+        mScrollView.setVisibility(View.INVISIBLE);
+        mDataErrorText.setVisibility(View.INVISIBLE);
+    }
+
+    void showData() {
+        mProgressBar.setVisibility(View.INVISIBLE);
+        mScrollView.setVisibility(View.VISIBLE);
+        mDataErrorText.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // re-queries for all tasks
+        getSupportLoaderManager().restartLoader(DB_MOVIE_LOADER_ID, null, dbLoaderListener);
+    }
+
+    public void buttonSetFavorite() {
+        mFavoriteButton.setText(getText(R.string.remove_mark_favorite));
+        mFavoriteButton.setBackgroundColor(ContextCompat.getColor(mContext, R.color.colorButtonPressed));
+    }
+
+    public void buttonUnSetFavorite() {
+        mFavoriteButton.setText(getText(R.string.mark_as_favorite));
+        mFavoriteButton.setBackgroundColor(ContextCompat.getColor(mContext, R.color.colorButton));
+    }
+
+        public void onClickFavorite(View view) {
+
+        if (mIsFavorite == 0) {
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(MovieContract.MovieEntry._ID, mMovieId);
+            contentValues.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 1);
+            contentValues.put(MovieContract.MovieEntry.COLUMN_POSTER,mPosterString);
+            Uri uri = getContentResolver().insert(MovieContract.MovieEntry.CONTENT_URI, contentValues);
+            if (uri != null) {
+                mIsFavorite = 1;
+                buttonSetFavorite();
+//                Toast.makeText(getBaseContext(), uri.toString(), Toast.LENGTH_LONG).show();
+            }
+        } else {
+            Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
+            if(getContentResolver().delete(uri,null,null)>0){
+                buttonUnSetFavorite();
+                mIsFavorite=0;
+            }else{
+                Toast.makeText(mContext,"Ooops, cant delete it",Toast.LENGTH_SHORT).show();
+            }
+
+        }
+
     }
 }

@@ -31,8 +31,10 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
     private String MOVIE_DB_API_KEY;
 
-    //if true-show popular. top_rated if false
-    private boolean isPopular;
+    //popular:0
+    //top:1
+    //fav:2
+    private int mMode;
 
     private static int PAGE_LIMIT = 100;
 
@@ -53,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         ButterKnife.bind(this);
 
 
-        isPopular = true;
+        mMode = 0;
         mLayoutManager = new GridLayoutManager(this, 2);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
@@ -86,11 +88,12 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
 
+        //TODO make 3 buttond but display 2 of them
         if (id == R.id.movies_order_menu) {
-            isPopular = !isPopular;
-            if (!isPopular) {
+            mMode = 1 - mMode;
+            if (mMode == 0) {
                 item.setTitle(R.string.menu_popular_first_title);
-            } else {
+            } else if (mMode == 1) {
                 item.setTitle(R.string.menu_top_rated_first_title);
             }
             mMovieAdapter.clearMovies();
@@ -102,10 +105,10 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     }
 
     private void loadData(int page) {
-        URL dataUrl;
-        if (isPopular) {
+        URL dataUrl=null;
+        if (mMode == 1) {
             dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
-        } else {
+        } else if (mMode == 0) {
             dataUrl = NetworkUtils.buildTopUrl(MOVIE_DB_API_KEY, page);
         }
         new FetchMovieData().execute(dataUrl);
