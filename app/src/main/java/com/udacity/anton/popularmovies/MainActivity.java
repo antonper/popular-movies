@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
@@ -19,11 +20,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.udacity.anton.popularmovies.content.MovieContract;
 import com.udacity.anton.popularmovies.data.MovieSimpleObject;
 import com.udacity.anton.popularmovies.utils.MovieListJsonUtils;
 import com.udacity.anton.popularmovies.utils.NetworkUtils;
+import com.udacity.anton.popularmovies.utils.UIUtils;
 
 import java.net.URL;
 
@@ -48,7 +51,12 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
     private static final String PAGE_KEY = "page";
 
-    public static final String MODE_SAVE_KEY="mode";
+    private static final String STATE_SAVE_KEY = "state";
+    private static final String MODE_SAVE_KEY = "mode";
+    private static final String PAGE_SAVE_KEY = "page";
+
+    private int mPage = 1;
+    private Parcelable mState;
 
     private static final int MOVIES_REMOTE_LOADER_ID = 10;
     private static final int MOVIES_DB_LOADER_ID = 11;
@@ -93,7 +101,6 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
                     if (mMode != 2) {
                         if (modeOld == mMode && mMovies != null && mPage > page) {
-                            Log.v(TAG, " Delivering result");
                             deliverResult(mMovies);
                         } else {
                             Log.v(TAG, " Loading page:" + page);
@@ -118,6 +125,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
                 @Override
                 public void deliverResult(MovieSimpleObject[] data) {
                     mMovies = data;
+                    Log.v(TAG, " Delivering result");
                     super.deliverResult(data);
                 }
             };
@@ -125,10 +133,10 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
         @Override
         public void onLoadFinished(Loader<MovieSimpleObject[]> loader, MovieSimpleObject[] data) {
-            mMovieAdapter.appendMovies(data);
             if (data == null) {
                 showError();
             } else {
+                mMovieAdapter.appendMovies(data);
                 showData();
             }
 
@@ -231,17 +239,20 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         mMode = 0;
         if (savedInstanceState != null) {
             if (savedInstanceState.containsKey(MODE_SAVE_KEY)) {
-                mMode=savedInstanceState.getInt(MODE_SAVE_KEY);
+                mMode = savedInstanceState.getInt(MODE_SAVE_KEY);
             }
+            if (savedInstanceState.containsKey(PAGE_SAVE_KEY)) {
+                mPage = savedInstanceState.getInt(PAGE_SAVE_KEY);
+            }
+            if (savedInstanceState.containsKey(STATE_SAVE_KEY)) {
+                mState = savedInstanceState.getParcelable(STATE_SAVE_KEY);
+            }
+
+            Log.v(TAG,"SavedInstances: Mode:"+mMode+ " page:"+mPage );
         }
 
 
-
-        if(getResources().getConfiguration().orientation == ORIENTATION_LANDSCAPE){
-            mColumnNumber=3;
-        }else{
-            mColumnNumber=2;
-        }
+        int mColumnNumber = UIUtils.calculateNoOfColumns(mContext);
         mLayoutManager = new GridLayoutManager(this, mColumnNumber);
         mRecyclerView.setLayoutManager(mLayoutManager);
 
@@ -259,10 +270,21 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         mRecyclerView.addOnScrollListener(endlessScrollListener);
 
 
-
-
         MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
-        loadData(1);
+        if (NetworkUtils.isNetworkAvailable(mContext)) {
+            mMovieAdapter.clearMovies();
+            loadData(1);
+        } else {
+            Toast.makeText(mContext, getString(R.string.no_data_received), Toast.LENGTH_SHORT).show();
+        }
+
+
+    }
+
+    @Override
+    protected void onResume() {
+        mLayoutManager.onRestoreInstanceState(mState);
+        super.onResume();
     }
 
     @Override
@@ -271,7 +293,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         inflater.inflate(R.menu.movies_order_menu, menu);
         this.mMenu = menu;
         mMenu.setGroupVisible(R.id.order_menu_group, true);
-        switch (mMode){
+        switch (mMode) {
             case 0:
                 mMenu.findItem(R.id.movies_popular_menu).setVisible(false);
                 break;
@@ -284,6 +306,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         }
         return true;
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -319,7 +342,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
     private void loadData(int page) {
 
-        Log.v(TAG, "MODE:" + mMode);
+        mPage = page;
+        Log.v(TAG, "MODE:" + mMode + " page:" + page);
 //        URL dataUrl = null;
 //        if (mMode == 1) {
 //            dataUrl = NetworkUtils.buildPopularUrl(MOVIE_DB_API_KEY, page);
@@ -328,6 +352,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 //        }
 //        new FetchMovieData().execute(dataUrl);
         LoaderManager loaderManager = getSupportLoaderManager();
+
         if (mMode != 2) {
             Bundle bundle = new Bundle();
             bundle.putInt(PAGE_KEY, page);
@@ -380,13 +405,11 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putInt(MODE_SAVE_KEY,mMode);
+        outState.putInt(MODE_SAVE_KEY, mMode);
+        outState.putParcelable(STATE_SAVE_KEY, mLayoutManager.onSaveInstanceState());
+        outState.putInt(PAGE_SAVE_KEY, mPage);
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
-        super.onSaveInstanceState(outState, outPersistentState);
-    }
 
     @Override
     public void onClick(MovieSimpleObject movieSimpleObject) {

@@ -1,5 +1,7 @@
 package com.udacity.anton.popularmovies.utils;
 
+import android.content.Context;
+import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListAdapter;
@@ -10,6 +12,13 @@ import android.widget.ListView;
  */
 
 public class UIUtils {
+
+    public static int calculateNoOfColumns(Context context) {
+        DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
+        float dpWidth = displayMetrics.widthPixels / displayMetrics.density;
+        int noOfColumns = (int) (dpWidth / 180);
+        return noOfColumns;
+    }
 
     public static boolean setListViewHeightBasedOnItems(ListView listView) {
 

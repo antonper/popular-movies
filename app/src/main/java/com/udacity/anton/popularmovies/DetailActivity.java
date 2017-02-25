@@ -325,14 +325,34 @@ public class DetailActivity extends AppCompatActivity  {
         Bundle movieDetailBundle = new Bundle();
         movieDetailBundle.putString(MOVIE_ID_KEY,mMovieId);
 
-        getSupportLoaderManager().initLoader(DETAIL_MOVIE_LOADER_ID,null, movieDetailLoaderListenter);
-        getSupportLoaderManager().initLoader(DB_MOVIE_LOADER_ID,null,dbLoaderListener);
 
+        if (NetworkUtils.isNetworkAvailable(mContext)) {
+            loadData();
+        } else {
+            Toast.makeText(mContext,getString(R.string.no_data_received),Toast.LENGTH_SHORT).show();
+        }
 
 
 
     }
 
+    void loadData() {
+        LoaderManager loaderManager = getSupportLoaderManager();
+
+        Loader<MovieDetailedObject> movieDetailLoader = loaderManager.getLoader(DETAIL_MOVIE_LOADER_ID);
+        Loader<Cursor> dbLoader = loaderManager.getLoader(DB_MOVIE_LOADER_ID);
+        if (movieDetailLoader == null) {
+            loaderManager.initLoader(DETAIL_MOVIE_LOADER_ID, null, movieDetailLoaderListenter);
+        } else {
+            loaderManager.restartLoader(DETAIL_MOVIE_LOADER_ID, null, movieDetailLoaderListenter);
+        }
+
+        if (dbLoader == null) {
+            loaderManager.initLoader(DB_MOVIE_LOADER_ID, null, dbLoaderListener);
+        } else {
+            loaderManager.restartLoader(DB_MOVIE_LOADER_ID, null, dbLoaderListener);
+        }
+    }
     void showError() {
         mProgressBar.setVisibility(View.INVISIBLE);
         mScrollView.setVisibility(View.INVISIBLE);
