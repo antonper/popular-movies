@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     ProgressBar mProgressBar;
     private MovieAdapter mMovieAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
-    private EndlessRecyclerViewScrollListener endlessScrollListener;
+//    private EndlessRecyclerViewScrollListener endlessScrollListener;
 
     private Context mContext;
     private int mColumnNumber;
@@ -138,6 +138,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
             } else {
                 mMovieAdapter.appendMovies(data);
                 showData();
+                finishLoad();
             }
 
         }
@@ -217,6 +218,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
                 }
                 mMovieAdapter.appendMovies(movies);
                 showData();
+                finishLoad();
             }
         }
 
@@ -234,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        mContext = this;
+        mContext = MainActivity.this;
 
         mMode = 0;
         if (savedInstanceState != null) {
@@ -248,32 +250,36 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
                 mState = savedInstanceState.getParcelable(STATE_SAVE_KEY);
             }
 
-            Log.v(TAG,"SavedInstances: Mode:"+mMode+ " page:"+mPage );
+            Log.v(TAG, "SavedInstances: Mode:" + mMode + " page:" + mPage);
         }
 
 
-        int mColumnNumber = UIUtils.calculateNoOfColumns(mContext);
-        mLayoutManager = new GridLayoutManager(this, mColumnNumber);
-        mRecyclerView.setLayoutManager(mLayoutManager);
 
-        mRecyclerView.setHasFixedSize(true);
+
 
         mMovieAdapter = new MovieAdapter(this);
-        mRecyclerView.setAdapter(mMovieAdapter);
-        endlessScrollListener = new EndlessRecyclerViewScrollListener((GridLayoutManager) mLayoutManager) {
-            @Override
-            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
-                if (mMode != 2 && page <= PAGE_LIMIT) loadData(page);
-            }
-
-        };
-        mRecyclerView.addOnScrollListener(endlessScrollListener);
+//        endlessScrollListener = new EndlessRecyclerViewScrollListener((GridLayoutManager) mLayoutManager,mPage) {
+//            @Override
+//            public void onLoadMore(int page, int totalItemsCount, RecyclerView view) {
+//                if (mMode != 2 && page <= PAGE_LIMIT) loadData(page);
+//            }
+//
+//        };
+//        mRecyclerView.addOnScrollListener(endlessScrollListener);
 
 
         MOVIE_DB_API_KEY = getString(R.string.moviedbapikey);
         if (NetworkUtils.isNetworkAvailable(mContext)) {
             mMovieAdapter.clearMovies();
-            loadData(1);
+            if (mMode == 2) {
+                loadData(1);
+            } else {
+                for (int i = 1; i <= mPage; i++) {
+                    loadData(i);
+                }
+            }
+
+
         } else {
             Toast.makeText(mContext, getString(R.string.no_data_received), Toast.LENGTH_SHORT).show();
         }
@@ -281,10 +287,17 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
 
     }
 
-    @Override
-    protected void onResume() {
-        mLayoutManager.onRestoreInstanceState(mState);
-        super.onResume();
+
+    void finishLoad(){
+        int mColumnNumber = UIUtils.calculateNoOfColumns(mContext);
+        mLayoutManager = new GridLayoutManager(MainActivity.this, mColumnNumber);
+        mRecyclerView.setHasFixedSize(true);
+        mRecyclerView.setLayoutManager(mLayoutManager);
+        mRecyclerView.setAdapter(mMovieAdapter);
+        if (mState != null) {
+            Log.v(TAG, "restoring state");
+            mLayoutManager.onRestoreInstanceState(mState);
+        }
     }
 
     @Override
@@ -315,7 +328,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         if (id == R.id.movies_top_rated_menu) {
             mMode = 1;
             mMovieAdapter.clearMovies();
-            endlessScrollListener.resetState();
+//            endlessScrollListener.resetState();
             loadData(1);
             mMenu.setGroupVisible(R.id.order_menu_group, true);
             item.setVisible(false);
@@ -323,14 +336,14 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         } else if (id == R.id.movies_popular_menu) {
             mMode = 0;
             mMovieAdapter.clearMovies();
-            endlessScrollListener.resetState();
+//            endlessScrollListener.resetState();
             mMenu.setGroupVisible(R.id.order_menu_group, true);
             item.setVisible(false);
             loadData(1);
         } else if (id == R.id.movies_favorite_menu) {
             mMode = 2;
             mMovieAdapter.clearMovies();
-            endlessScrollListener.resetState();
+//            endlessScrollListener.resetState();
             loadData(1);
             mMenu.setGroupVisible(R.id.order_menu_group, true);
             item.setVisible(false);
