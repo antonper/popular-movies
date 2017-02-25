@@ -5,6 +5,8 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 
+// code using guide from https://guides.codepath.com/android/Endless-Scrolling-with-AdapterViews-and-RecyclerView
+
 public abstract class EndlessRecyclerViewScrollListener extends RecyclerView.OnScrollListener {
     private int visibleThreshold = 8;
     private int currentPage = 0;
