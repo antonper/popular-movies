@@ -36,14 +36,13 @@ import java.net.URL;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class DetailActivity extends AppCompatActivity  {
+public class DetailActivity extends AppCompatActivity {
     public static final String TAG = DetailActivity.class.getSimpleName();
 
     private static final int DB_MOVIE_LOADER_ID = 0;
     private static final int DETAIL_MOVIE_LOADER_ID = 1;
 
-    private static final String MOVIE_ID_KEY ="movie_id";
-
+    private static final String MOVIE_ID_KEY = "movie_id";
 
 
     private String mMovieId;
@@ -90,7 +89,7 @@ public class DetailActivity extends AppCompatActivity  {
     private Button mFavoriteButton;
 
     private VideoObject[] mVideos;
-    private LoaderManager.LoaderCallbacks<Cursor> dbLoaderListener= new LoaderManager.LoaderCallbacks<Cursor>() {
+    private LoaderManager.LoaderCallbacks<Cursor> dbLoaderListener = new LoaderManager.LoaderCallbacks<Cursor>() {
         @Override
         public Loader<Cursor> onCreateLoader(int id, Bundle args) {
             return new AsyncTaskLoader<Cursor>(mContext) {
@@ -147,7 +146,7 @@ public class DetailActivity extends AppCompatActivity  {
 
         @Override
         public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-            if (data!=null && data.getCount() > 0) {
+            if (data != null && data.getCount() > 0) {
                 int columnFavorite = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_FAVORITE);
                 int columnPoster = data.getColumnIndex(MovieContract.MovieEntry.COLUMN_POSTER);
                 data.moveToFirst();
@@ -167,7 +166,7 @@ public class DetailActivity extends AppCompatActivity  {
 
 
     };
-    private LoaderManager.LoaderCallbacks<MovieDetailedObject> movieDetailLoaderListenter = new LoaderManager.LoaderCallbacks<MovieDetailedObject>(){
+    private LoaderManager.LoaderCallbacks<MovieDetailedObject> movieDetailLoaderListenter = new LoaderManager.LoaderCallbacks<MovieDetailedObject>() {
 
         @Override
         public Loader<MovieDetailedObject> onCreateLoader(int id, Bundle args) {
@@ -191,7 +190,7 @@ public class DetailActivity extends AppCompatActivity  {
                 @Override
                 public MovieDetailedObject loadInBackground() {
                     URL detailsUrl = NetworkUtils.buildDetailUrl(MOVIE_DB_API_KEY, mMovieId);
-                    URL trailersUrl = NetworkUtils.buildTrailersUrl(MOVIE_DB_API_KEY,mMovieId );
+                    URL trailersUrl = NetworkUtils.buildTrailersUrl(MOVIE_DB_API_KEY, mMovieId);
                     URL reviewsUrl = NetworkUtils.buildReviewsUrl(MOVIE_DB_API_KEY, mMovieId);
                     try {
                         String jsonMovieDetails = NetworkUtils.getResponseFromHttpUrl(detailsUrl);
@@ -229,7 +228,7 @@ public class DetailActivity extends AppCompatActivity  {
                 String year = fullDate.split("-")[0];
                 mDateTextView.setText(year);
 
-                mPosterString=movieDetailedObject.getMoviePosterPath();
+                mPosterString = movieDetailedObject.getMoviePosterPath();
 
                 Picasso.with(mContext)
                         .load(movieDetailedObject.getMoviePosterPath())
@@ -246,13 +245,13 @@ public class DetailActivity extends AppCompatActivity  {
                 mVideos = movieDetailedObject.getMovieTrailers();
                 Log.v(TAG, "Videos number:" + mVideos.length);
 //                mVideosArrayAdapter.setVideos(mVideos);
-                if(mVideos.length==0) {
+                if (mVideos.length == 0) {
                     mTrailersTitle.setText(getString(R.string.no_trailers_title));
                 }
 
                 mReviews = movieDetailedObject.getMovieReviews();
                 Log.v(TAG, "Reviews number:" + mReviews.length);
-                if(mReviews.length==0) {
+                if (mReviews.length == 0) {
                     mReviewsTitle.setText(getString(R.string.no_reviews_title));
                 }
 //                mReviewsArrayAdapter.setReviews(mReviews);
@@ -323,15 +322,14 @@ public class DetailActivity extends AppCompatActivity  {
 
 
         Bundle movieDetailBundle = new Bundle();
-        movieDetailBundle.putString(MOVIE_ID_KEY,mMovieId);
+        movieDetailBundle.putString(MOVIE_ID_KEY, mMovieId);
 
 
         if (NetworkUtils.isNetworkAvailable(mContext)) {
             loadData();
         } else {
-            Toast.makeText(mContext,getString(R.string.no_data_received),Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext, getString(R.string.no_data_received), Toast.LENGTH_SHORT).show();
         }
-
 
 
     }
@@ -353,6 +351,7 @@ public class DetailActivity extends AppCompatActivity  {
             loaderManager.restartLoader(DB_MOVIE_LOADER_ID, null, dbLoaderListener);
         }
     }
+
     void showError() {
         mProgressBar.setVisibility(View.INVISIBLE);
         mScrollView.setVisibility(View.INVISIBLE);
@@ -389,13 +388,13 @@ public class DetailActivity extends AppCompatActivity  {
         mFavoriteButton.setBackgroundColor(ContextCompat.getColor(mContext, R.color.colorButton));
     }
 
-        public void onClickFavorite(View view) {
+    public void onClickFavorite(View view) {
 
         if (mIsFavorite == 0) {
             ContentValues contentValues = new ContentValues();
             contentValues.put(MovieContract.MovieEntry._ID, mMovieId);
             contentValues.put(MovieContract.MovieEntry.COLUMN_FAVORITE, 1);
-            contentValues.put(MovieContract.MovieEntry.COLUMN_POSTER,mPosterString);
+            contentValues.put(MovieContract.MovieEntry.COLUMN_POSTER, mPosterString);
             Uri uri = getContentResolver().insert(MovieContract.MovieEntry.CONTENT_URI, contentValues);
             if (uri != null) {
                 mIsFavorite = 1;
@@ -404,11 +403,11 @@ public class DetailActivity extends AppCompatActivity  {
             }
         } else {
             Uri uri = MovieContract.MovieEntry.CONTENT_URI.buildUpon().appendPath(mMovieId).build();
-            if(getContentResolver().delete(uri,null,null)>0){
+            if (getContentResolver().delete(uri, null, null) > 0) {
                 buttonUnSetFavorite();
-                mIsFavorite=0;
-            }else{
-                Toast.makeText(mContext,"Ooops, cant delete it",Toast.LENGTH_SHORT).show();
+                mIsFavorite = 0;
+            } else {
+                Toast.makeText(mContext, "Ooops, cant delete it", Toast.LENGTH_SHORT).show();
             }
 
         }
